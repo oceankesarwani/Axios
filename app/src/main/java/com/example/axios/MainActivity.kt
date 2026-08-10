@@ -33,13 +33,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Clear any previously cached default data so stale defaults don't persist
-        DataRepository.clearCache(this)
+        // One-time migration: clear old hardcoded defaults (runs only on first launch after update)
+        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+        if (!prefs.getBoolean("defaults_cleared_v1", false)) {
+            DataRepository.clearCache(this)
+            prefs.edit().putBoolean("defaults_cleared_v1", true).apply()
+        }
 
         // Initialize DataRepository (loads local cache then starts Firestore sync)
         DataRepository.init(this) {
             // Callback when local data loaded/firestore synced.
-            // Fragments can fetch latest cache on resumed or we can reload UI.
         }
 
         enableEdgeToEdge()

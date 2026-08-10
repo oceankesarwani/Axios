@@ -72,8 +72,11 @@ class WingAdapter(
     }
 }
 
-class ResourceAdapter(private var items: List<DataRepository.Resource>) :
-    RecyclerView.Adapter<ResourceAdapter.ViewHolder>() {
+class ResourceAdapter(
+    private var items: List<DataRepository.Resource>,
+    private val onDelete: (DataRepository.Resource) -> Unit,
+    private val onOpen: (DataRepository.Resource) -> Unit
+) : RecyclerView.Adapter<ResourceAdapter.ViewHolder>() {
 
     class ViewHolder(val binding: ItemResourceBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -90,6 +93,8 @@ class ResourceAdapter(private var items: List<DataRepository.Resource>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         holder.binding.tvFileName.text = item.fileName
+        holder.binding.btnDeleteResource.setOnClickListener { onDelete(item) }
+        holder.binding.resourceCard.setOnClickListener { onOpen(item) }
     }
 
     override fun getItemCount(): Int = items.size

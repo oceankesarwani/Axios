@@ -1,12 +1,17 @@
 package com.example.axios
 
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.axios.databinding.FragmentResourcesBinding
@@ -25,6 +30,16 @@ class ResourcesFragment : Fragment() {
             arguments = Bundle().apply {
                 putString(ARG_WING_NAME, wingName)
             }
+        }
+    }
+
+    // File picker launcher — accepts any file type
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val fileName = getFileNameFromUri(uri) ?: "file_${System.currentTimeMillis()}"
+            startUpload(uri, fileName)
         }
     }
 
@@ -48,13 +63,120 @@ class ResourcesFragment : Fragment() {
 
         binding.recyclerResources.layoutManager = LinearLayoutManager(requireContext())
         val filteredList = DataRepository.resources.filter { it.wingName.equals(wingName, ignoreCase = true) }
-        adapter = ResourceAdapter(filteredList)
+        adapter = ResourceAdapter(
+            filteredList,
+            onDelete = { resource -> confirmDelete(resource) },
+            onOpen = { resource -> openFile(resource) }
+        )
         binding.recyclerResources.adapter = adapter
         updateEmptyState(filteredList)
 
+        // FAB opens file picker
         binding.fabAddWing.setOnClickListener {
-            showAddResourceDialog()
+            filePickerLauncher.launch("*/*")
         }
+    }
+
+    private fun getFileNameFromUri(uri: Uri): String? {
+        var name: String? = null
+        val cursor = requireContext().contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val idx = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) name = it.getString(idx)
+            }
+        }
+        return name
+    }
+
+    private fun startUpload(uri: Uri, fileName: String) {
+        // Build a progress dialog
+        val progressView = LayoutInflater.from(requireContext())
+            .inflate(android.R.layout.simple_list_item_2, null)
+        val progressBar = ProgressBar(requireContext(), null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        val tvStatus = TextView(requireContext()).apply {
+            text = "Uploading $fileName…"
+            setPadding(48, 24, 48, 8)
+        }
+        val tvPercent = TextView(requireContext()).apply {
+            text = "0%"
+            setPadding(48, 4, 48, 24)
+        }
+
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 16)
+            addView(tvStatus)
+            addView(progressBar)
+            addView(tvPercent)
+        }
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Uploading File")
+            .setView(container)
+            .setCancelable(false)
+            .create()
+        dialog.show()
+
+        DataRepository.uploadFile(
+            context = requireContext(),
+            wingName = wingName,
+            fileUri = uri,
+            fileName = fileName,
+            onProgress = { progress ->
+                activity?.runOnUiThread {
+                    progressBar.progress = progress
+                    tvPercent.text = "$progress%"
+                }
+            },
+            onSuccess = {
+                activity?.runOnUiThread {
+                    dialog.dismiss()
+                    Toast.makeText(requireContext(), "\"$fileName\" uploaded!", Toast.LENGTH_SHORT).show()
+                    refreshList()
+                }
+            },
+            onFailure = { e ->
+                activity?.runOnUiThread {
+                    dialog.dismiss()
+                    Toast.makeText(requireContext(), "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        )
+    }
+
+    private fun confirmDelete(resource: DataRepository.Resource) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete File")
+            .setMessage("Delete \"${resource.fileName}\"? This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                DataRepository.deleteResource(requireContext(), resource) {
+                    activity?.runOnUiThread {
+                        Toast.makeText(requireContext(), "\"${resource.fileName}\" deleted", Toast.LENGTH_SHORT).show()
+                        refreshList()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openFile(resource: DataRepository.Resource) {
+        if (resource.downloadUrl.isNotEmpty()) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resource.downloadUrl))
+            startActivity(Intent.createChooser(intent, "Open with"))
+        } else {
+            Toast.makeText(requireContext(), "No download link available", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun refreshList() {
+        val updatedList = DataRepository.resources.filter { it.wingName.equals(wingName, ignoreCase = true) }
+        adapter.updateData(updatedList)
+        updateEmptyState(updatedList)
     }
 
     private fun updateEmptyState(list: List<DataRepository.Resource>) {
@@ -65,38 +187,6 @@ class ResourcesFragment : Fragment() {
             binding.tvEmptyResources.visibility = View.GONE
             binding.recyclerResources.visibility = View.VISIBLE
         }
-    }
-
-    private fun showAddResourceDialog() {
-        val etFileName = EditText(requireContext()).apply {
-            hint = "Resource File Name (e.g. Kotlin_Basics.pdf)"
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            setPadding(padding, padding, padding, padding)
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Add Resource")
-            .setView(etFileName)
-            .setPositiveButton("Add") { dialog, _ ->
-                val fileName = etFileName.text.toString().trim()
-                if (fileName.isEmpty()) {
-                    Toast.makeText(requireContext(), "File name cannot be empty", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-
-                DataRepository.addResource(requireContext(), wingName, fileName) {
-                    activity?.runOnUiThread {
-                        val updatedList = DataRepository.resources.filter { it.wingName.equals(wingName, ignoreCase = true) }
-                        adapter.updateData(updatedList)
-                        updateEmptyState(updatedList)
-                    }
-                }
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
     }
 
     override fun onDestroyView() {

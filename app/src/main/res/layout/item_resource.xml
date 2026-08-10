@@ -39,6 +39,15 @@
                 android:textSize="16sp"
                 android:textColor="?attr/colorOnBackground" />
 
+            <ImageButton
+                android:id="@+id/btnDeleteResource"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_delete"
+                android:contentDescription="Delete resource"
+                android:tint="#EF5350" />
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>

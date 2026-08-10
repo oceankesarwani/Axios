@@ -1,10 +1,14 @@
 package com.example.axios
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.PrintWriter
+import java.net.HttpURLConnection
+import java.net.URL
 
 object DataRepository {
     private const val PREFS_NAME = "axios_local_cache"
@@ -14,6 +18,11 @@ object DataRepository {
     private const val KEY_RESOURCES = "resources"
 
     private val db = FirebaseFirestore.getInstance()
+
+    // ── Cloudinary config ──────────────────────────────────────────────────────
+    private const val CLOUDINARY_CLOUD_NAME = "damfglkvl"
+    private const val CLOUDINARY_UPLOAD_PRESET = "axios_pdf_upload" // unsigned preset — no API secret needed
+    // ──────────────────────────────────────────────────────────────────────────
 
     var wings = mutableListOf<String>()
     var announcements = mutableListOf<Announcement>()
@@ -48,7 +57,8 @@ object DataRepository {
     data class Resource(
         val id: String = "",
         val wingName: String = "",
-        val fileName: String = ""
+        val fileName: String = "",
+        val downloadUrl: String = ""
     )
 
     fun init(context: Context, onComplete: () -> Unit) {
@@ -133,7 +143,8 @@ object DataRepository {
                         Resource(
                             id = obj.optString("id"),
                             wingName = obj.optString("wingName"),
-                            fileName = obj.optString("fileName")
+                            fileName = obj.optString("fileName"),
+                            downloadUrl = obj.optString("downloadUrl")
                         )
                     )
                 }
@@ -187,6 +198,7 @@ object DataRepository {
                 put("id", r.id)
                 put("wingName", r.wingName)
                 put("fileName", r.fileName)
+                put("downloadUrl", r.downloadUrl)
             }
             resArr.put(obj)
         }
@@ -202,9 +214,11 @@ object DataRepository {
             for (doc in result) {
                 doc.getString("name")?.let { tempWings.add(it) }
             }
-            wings = tempWings
-            saveLocalData(context)
-            onComplete()
+            if (tempWings.isNotEmpty()) {
+                wings = tempWings
+                saveLocalData(context)
+                onComplete()
+            }
         }.addOnFailureListener { e ->
             Log.e("DataRepository", "Firestore wings fetch failed, using local fallback.", e)
         }
@@ -223,9 +237,11 @@ object DataRepository {
                     )
                 )
             }
-            announcements = tempAnn
-            saveLocalData(context)
-            onComplete()
+            if (tempAnn.isNotEmpty()) {
+                announcements = tempAnn
+                saveLocalData(context)
+                onComplete()
+            }
         }.addOnFailureListener { e ->
             Log.e("DataRepository", "Firestore announcements fetch failed, using local fallback.", e)
         }
@@ -245,9 +261,11 @@ object DataRepository {
                     )
                 )
             }
-            members = tempMem
-            saveLocalData(context)
-            onComplete()
+            if (tempMem.isNotEmpty()) {
+                members = tempMem
+                saveLocalData(context)
+                onComplete()
+            }
         }.addOnFailureListener { e ->
             Log.e("DataRepository", "Firestore members fetch failed, using local fallback.", e)
         }
@@ -260,13 +278,16 @@ object DataRepository {
                     Resource(
                         id = doc.id,
                         wingName = doc.getString("wingName") ?: "",
-                        fileName = doc.getString("fileName") ?: ""
+                        fileName = doc.getString("fileName") ?: "",
+                        downloadUrl = doc.getString("downloadUrl") ?: ""
                     )
                 )
             }
-            resources = tempRes
-            saveLocalData(context)
-            onComplete()
+            if (tempRes.isNotEmpty()) {
+                resources = tempRes
+                saveLocalData(context)
+                onComplete()
+            }
         }.addOnFailureListener { e ->
             Log.e("DataRepository", "Firestore resources fetch failed, using local fallback.", e)
         }
@@ -333,12 +354,13 @@ object DataRepository {
             .addOnFailureListener { e -> Log.w("DataRepository", "Error writing member to Firestore", e) }
     }
 
-    fun addResource(context: Context, wingName: String, fileName: String, onComplete: () -> Unit) {
+    fun addResource(context: Context, wingName: String, fileName: String, downloadUrl: String, onComplete: () -> Unit) {
         val docRef = db.collection("resources").document()
         val res = Resource(
             id = docRef.id,
             wingName = wingName,
-            fileName = fileName
+            fileName = fileName,
+            downloadUrl = downloadUrl
         )
         resources.add(res)
         saveLocalData(context)
@@ -346,9 +368,117 @@ object DataRepository {
 
         val data = mapOf(
             "wingName" to wingName,
-            "fileName" to fileName
+            "fileName" to fileName,
+            "downloadUrl" to downloadUrl
         )
         docRef.set(data)
             .addOnFailureListener { e -> Log.w("DataRepository", "Error writing resource to Firestore", e) }
+    }
+
+    fun uploadFile(
+        context: Context,
+        wingName: String,
+        fileUri: Uri,
+        fileName: String,
+        onProgress: (Int) -> Unit,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        Thread {
+            try {
+                // Read file bytes from URI
+                val inputStream = context.contentResolver.openInputStream(fileUri)
+                    ?: throw Exception("Cannot open file")
+                val bytes = inputStream.readBytes()
+                inputStream.close()
+
+                onProgress(10) // signal started
+
+                val boundary = "----AxiosBoundary${System.currentTimeMillis()}"
+                val uploadUrl = URL(
+                    "https://api.cloudinary.com/v1_1/$CLOUDINARY_CLOUD_NAME/auto/upload"
+                )
+
+                val conn = uploadUrl.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+                conn.connectTimeout = 30_000
+                conn.readTimeout = 60_000
+
+                val os = conn.outputStream
+                val writer = PrintWriter(os.writer(Charsets.UTF_8), true)
+
+                // upload_preset field
+                writer.append("--$boundary\r\n")
+                writer.append("Content-Disposition: form-data; name=\"upload_preset\"\r\n\r\n")
+                writer.append("$CLOUDINARY_UPLOAD_PRESET\r\n")
+                writer.flush()
+
+                // public_id field — organises files in Cloudinary by wing
+                writer.append("--$boundary\r\n")
+                writer.append("Content-Disposition: form-data; name=\"public_id\"\r\n\r\n")
+                writer.append("axios/resources/$wingName/$fileName\r\n")
+                writer.flush()
+
+                // file field
+                writer.append("--$boundary\r\n")
+                writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"$fileName\"\r\n")
+                writer.append("Content-Type: application/octet-stream\r\n\r\n")
+                writer.flush()
+
+                // Write file bytes in chunks and report progress
+                val chunkSize = 8192
+                var uploaded = 0
+                var offset = 0
+                while (offset < bytes.size) {
+                    val end = minOf(offset + chunkSize, bytes.size)
+                    os.write(bytes, offset, end - offset)
+                    uploaded += end - offset
+                    offset = end
+                    val progress = 10 + (uploaded.toDouble() / bytes.size * 80).toInt()
+                    onProgress(progress)
+                }
+                os.flush()
+
+                writer.append("\r\n--$boundary--\r\n")
+                writer.flush()
+
+                onProgress(90)
+
+                val responseCode = conn.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = conn.inputStream.bufferedReader().readText()
+                    val jsonResponse = JSONObject(response)
+                    val downloadUrl = jsonResponse.getString("secure_url")
+
+                    onProgress(100)
+                    addResource(context, wingName, fileName, downloadUrl) {
+                        onSuccess()
+                    }
+                } else {
+                    val error = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP $responseCode"
+                    onFailure(Exception("Cloudinary upload failed: $error"))
+                }
+
+                conn.disconnect()
+            } catch (e: Exception) {
+                Log.e("DataRepository", "Cloudinary upload error", e)
+                onFailure(e)
+            }
+        }.start()
+    }
+
+    fun deleteResource(context: Context, resource: Resource, onComplete: () -> Unit) {
+        // Remove from local cache
+        resources.remove(resource)
+        saveLocalData(context)
+        onComplete()
+
+        // Delete Firestore document
+        // Note: Cloudinary file deletion requires a signed request with API secret.
+        // Do this from a backend/Cloud Function to avoid exposing credentials in the app.
+        db.collection("resources").document(resource.id).delete()
+            .addOnFailureListener { e -> Log.w("DataRepository", "Error deleting resource from Firestore", e) }
     }
 }

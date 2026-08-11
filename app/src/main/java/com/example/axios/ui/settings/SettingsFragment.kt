@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.example.axios.LoginActivity
+import com.example.axios.data.DataRepository
 import com.example.axios.databinding.FragmentSettingsBinding
 import com.google.firebase.auth.FirebaseAuth
 
@@ -39,18 +40,17 @@ class SettingsFragment : Fragment() {
             "N/A"
         }
 
-        val course = when {
-            rollNo.startsWith("LIT") -> "Information Technology"
-            rollNo.startsWith("LCS") -> "Computer Science"
-            rollNo.startsWith("LDS") -> "Data Science"
-            rollNo.startsWith("LBA") -> "Business Administration"
-            else -> "IIIT Lucknow"
+        val matchedMembers = DataRepository.members.filter { it.rollNo.equals(rollNo, ignoreCase = true) }
+        val studentRole = if (matchedMembers.isNotEmpty()) {
+            matchedMembers.map { it.role }.distinct().joinToString(", ")
+        } else {
+            "Student"
         }
 
         // Display user info in My Profile card
         binding.name.text = name
         binding.rollNo.text = rollNo
-        binding.course.text = course
+        binding.studentRole.text = studentRole
 
         // 2. Setup theme toggle switch with persistence
         val sharedPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)

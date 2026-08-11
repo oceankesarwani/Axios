@@ -3,6 +3,7 @@ package com.example.axios.data
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.example.axios.BuildConfig
 import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,8 +21,9 @@ object DataRepository {
     private val db = FirebaseFirestore.getInstance()
 
     // ── Cloudinary config ──────────────────────────────────────────────────────
-    private const val CLOUDINARY_CLOUD_NAME = "damfglkvl"
-    private const val CLOUDINARY_UPLOAD_PRESET = "axios_pdf_upload" // unsigned preset — no API secret needed
+    // Values are injected at build time from local.properties (gitignored)
+    private val CLOUDINARY_CLOUD_NAME get() = BuildConfig.CLOUDINARY_CLOUD_NAME
+    private val CLOUDINARY_UPLOAD_PRESET get() = BuildConfig.CLOUDINARY_UPLOAD_PRESET
     // ──────────────────────────────────────────────────────────────────────────
 
     var wings = mutableListOf<String>()

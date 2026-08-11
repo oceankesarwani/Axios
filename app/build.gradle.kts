@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,6 +18,18 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Read Cloudinary secrets from local.properties (gitignored)
+        val localProps = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) load(f.inputStream())
+        }
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME",
+            "\"${localProps.getProperty("CLOUDINARY_CLOUD_NAME", "")}\""
+        )
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET",
+            "\"${localProps.getProperty("CLOUDINARY_UPLOAD_PRESET", "")}\""
+        )
     }
 
     buildTypes {
@@ -36,6 +50,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

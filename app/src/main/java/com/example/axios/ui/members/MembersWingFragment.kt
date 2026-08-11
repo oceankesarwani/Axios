@@ -1,4 +1,4 @@
-package com.example.axios
+package com.example.axios.ui.members
 
 import android.app.AlertDialog
 import android.os.Bundle
@@ -9,6 +9,9 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.axios.R
+import com.example.axios.adapter.WingAdapter
+import com.example.axios.data.DataRepository
 import com.example.axios.databinding.FragmentMembersWingnamesBinding
 
 class MembersWingFragment : Fragment() {

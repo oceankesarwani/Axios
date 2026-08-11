@@ -1,4 +1,4 @@
-package com.example.axios
+package com.example.axios.ui.resources
 
 import android.app.AlertDialog
 import android.content.Intent
@@ -14,6 +14,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.axios.adapter.ResourceAdapter
+import com.example.axios.data.DataRepository
 import com.example.axios.databinding.FragmentResourcesBinding
 
 class ResourcesFragment : Fragment() {
@@ -33,11 +35,21 @@ class ResourcesFragment : Fragment() {
         }
     }
 
-    // File picker launcher — accepts any file type
+    // OpenDocument uses the system Storage Access Framework picker — no extra
+    // permissions needed (unlike GetContent which fails for arbitrary file
+    // types on Android 13+ without READ_MEDIA_DOCUMENTS).
     private val filePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
+            // Take a persistable permission so the background upload thread
+            // can still read the URI after the picker dismisses.
+            try {
+                requireContext().contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) { /* not all providers support this */ }
             val fileName = getFileNameFromUri(uri) ?: "file_${System.currentTimeMillis()}"
             startUpload(uri, fileName)
         }
@@ -71,9 +83,9 @@ class ResourcesFragment : Fragment() {
         binding.recyclerResources.adapter = adapter
         updateEmptyState(filteredList)
 
-        // FAB opens file picker
+        // FAB opens file picker — pass all MIME types
         binding.fabAddWing.setOnClickListener {
-            filePickerLauncher.launch("*/*")
+            filePickerLauncher.launch(arrayOf("*/*"))
         }
     }
 
@@ -91,8 +103,6 @@ class ResourcesFragment : Fragment() {
 
     private fun startUpload(uri: Uri, fileName: String) {
         // Build a progress dialog
-        val progressView = LayoutInflater.from(requireContext())
-            .inflate(android.R.layout.simple_list_item_2, null)
         val progressBar = ProgressBar(requireContext(), null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)

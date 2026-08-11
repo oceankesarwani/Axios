@@ -1,4 +1,4 @@
-package com.example.axios
+package com.example.axios.ui.home
 
 import android.app.AlertDialog
 import android.os.Bundle
@@ -11,6 +11,9 @@ import android.widget.Spinner
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.axios.R
+import com.example.axios.adapter.AnnouncementAdapter
+import com.example.axios.data.DataRepository
 import com.example.axios.databinding.FragmentHomeBinding
 
 class HomeFragment : Fragment() {

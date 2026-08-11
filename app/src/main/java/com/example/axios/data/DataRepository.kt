@@ -1,4 +1,4 @@
-package com.example.axios
+package com.example.axios.data
 
 import android.content.Context
 import android.net.Uri
@@ -154,57 +154,58 @@ object DataRepository {
         }
     }
 
-    private fun saveLocalData(context: Context) {
+    // Per-collection save helpers — each callback only persists its own data,
+    // preventing a race condition where one collection's save overwrites another's
+    // cached data before it has been fetched from Firestore.
+
+    private fun saveWings(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val editor = prefs.edit()
+        prefs.edit().putString(KEY_WINGS, JSONArray(wings).toString()).apply()
+    }
 
-        // Wings
-        val wingsArr = JSONArray(wings)
-        editor.putString(KEY_WINGS, wingsArr.toString())
-
-        // Announcements
-        val annArr = JSONArray()
+    private fun saveAnnouncements(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val arr = JSONArray()
         for (a in announcements) {
-            val obj = JSONObject().apply {
+            arr.put(JSONObject().apply {
                 put("id", a.id)
                 put("wingName", a.wingName)
                 put("message", a.message)
                 put("info", a.info)
                 put("timestamp", a.timestamp)
-            }
-            annArr.put(obj)
+            })
         }
-        editor.putString(KEY_ANNOUNCEMENTS, annArr.toString())
+        prefs.edit().putString(KEY_ANNOUNCEMENTS, arr.toString()).apply()
+    }
 
-        // Members
-        val memArr = JSONArray()
+    private fun saveMembers(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val arr = JSONArray()
         for (m in members) {
-            val obj = JSONObject().apply {
+            arr.put(JSONObject().apply {
                 put("id", m.id)
                 put("wingName", m.wingName)
                 put("name", m.name)
                 put("rollNo", m.rollNo)
                 put("contactInfo", m.contactInfo)
                 put("role", m.role)
-            }
-            memArr.put(obj)
+            })
         }
-        editor.putString(KEY_MEMBERS, memArr.toString())
+        prefs.edit().putString(KEY_MEMBERS, arr.toString()).apply()
+    }
 
-        // Resources
-        val resArr = JSONArray()
+    private fun saveResources(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val arr = JSONArray()
         for (r in resources) {
-            val obj = JSONObject().apply {
+            arr.put(JSONObject().apply {
                 put("id", r.id)
                 put("wingName", r.wingName)
                 put("fileName", r.fileName)
                 put("downloadUrl", r.downloadUrl)
-            }
-            resArr.put(obj)
+            })
         }
-        editor.putString(KEY_RESOURCES, resArr.toString())
-
-        editor.apply()
+        prefs.edit().putString(KEY_RESOURCES, arr.toString()).apply()
     }
 
     private fun syncFromFirestore(context: Context, onComplete: () -> Unit) {
@@ -216,7 +217,7 @@ object DataRepository {
             }
             if (tempWings.isNotEmpty()) {
                 wings = tempWings
-                saveLocalData(context)
+                saveWings(context)  // only save wings — avoids overwriting other cached data
                 onComplete()
             }
         }.addOnFailureListener { e ->
@@ -237,11 +238,10 @@ object DataRepository {
                     )
                 )
             }
-            if (tempAnn.isNotEmpty()) {
-                announcements = tempAnn
-                saveLocalData(context)
-                onComplete()
-            }
+            // Always update — even an empty result clears stale deleted announcements
+            announcements = tempAnn
+            saveAnnouncements(context)  // only save announcements
+            onComplete()
         }.addOnFailureListener { e ->
             Log.e("DataRepository", "Firestore announcements fetch failed, using local fallback.", e)
         }
@@ -263,7 +263,7 @@ object DataRepository {
             }
             if (tempMem.isNotEmpty()) {
                 members = tempMem
-                saveLocalData(context)
+                saveMembers(context)  // only save members
                 onComplete()
             }
         }.addOnFailureListener { e ->
@@ -285,7 +285,7 @@ object DataRepository {
             }
             if (tempRes.isNotEmpty()) {
                 resources = tempRes
-                saveLocalData(context)
+                saveResources(context)  // only save resources
                 onComplete()
             }
         }.addOnFailureListener { e ->
@@ -296,7 +296,7 @@ object DataRepository {
     fun addWing(context: Context, wingName: String, onComplete: () -> Unit) {
         if (!wings.contains(wingName)) {
             wings.add(wingName)
-            saveLocalData(context)
+            saveWings(context)
             onComplete()
 
             // Save to Firestore
@@ -316,7 +316,7 @@ object DataRepository {
             timestamp = System.currentTimeMillis()
         )
         announcements.add(ann)
-        saveLocalData(context)
+        saveAnnouncements(context)
         onComplete()
 
         val data = mapOf(
@@ -340,7 +340,7 @@ object DataRepository {
             role = role
         )
         members.add(mem)
-        saveLocalData(context)
+        saveMembers(context)
         onComplete()
 
         val data = mapOf(
@@ -363,7 +363,7 @@ object DataRepository {
             downloadUrl = downloadUrl
         )
         resources.add(res)
-        saveLocalData(context)
+        saveResources(context)
         onComplete()
 
         val data = mapOf(
@@ -472,7 +472,7 @@ object DataRepository {
     fun deleteResource(context: Context, resource: Resource, onComplete: () -> Unit) {
         // Remove from local cache
         resources.remove(resource)
-        saveLocalData(context)
+        saveResources(context)
         onComplete()
 
         // Delete Firestore document

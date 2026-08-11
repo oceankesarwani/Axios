@@ -7,6 +7,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.axios.data.DataRepository
+import com.example.axios.ui.home.HomeFragment
+import com.example.axios.ui.members.MembersWingFragment
+import com.example.axios.ui.resources.ResourcesWingFragment
+import com.example.axios.ui.settings.SettingsFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 
@@ -47,7 +52,7 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        
+
         val mainView = findViewById<android.view.View>(R.id.main)
         ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())

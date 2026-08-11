@@ -1,4 +1,4 @@
-package com.example.axios
+package com.example.axios.ui.settings
 
 import android.content.Context
 import android.content.Intent
@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
+import com.example.axios.LoginActivity
 import com.example.axios.databinding.FragmentSettingsBinding
 import com.google.firebase.auth.FirebaseAuth
 
@@ -31,7 +32,7 @@ class SettingsFragment : Fragment() {
         val currentUser = FirebaseAuth.getInstance().currentUser
         val name = currentUser?.displayName ?: "Guest User"
         val email = currentUser?.email ?: ""
-        
+
         val rollNo = if (email.endsWith("@iiitl.ac.in")) {
             email.substringBefore("@").uppercase()
         } else {
@@ -54,14 +55,14 @@ class SettingsFragment : Fragment() {
         // 2. Setup theme toggle switch with persistence
         val sharedPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val isDarkMode = sharedPrefs.getBoolean("is_dark_mode", false)
-        
+
         binding.switch1.isChecked = isDarkMode
         binding.switch1.text = if (isDarkMode) "Switch to light mode" else "Switch to dark mode"
 
         binding.switch1.setOnCheckedChangeListener { _, isChecked ->
             sharedPrefs.edit().putBoolean("is_dark_mode", isChecked).apply()
             binding.switch1.text = if (isChecked) "Switch to light mode" else "Switch to dark mode"
-            
+
             if (isChecked) {
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
             } else {

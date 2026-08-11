@@ -1,4 +1,4 @@
-package com.example.axios
+package com.example.axios.ui.resources
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,6 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.axios.R
+import com.example.axios.adapter.WingAdapter
+import com.example.axios.data.DataRepository
 import com.example.axios.databinding.FragmentResourcesWingnamesBinding
 
 class ResourcesWingFragment : Fragment() {

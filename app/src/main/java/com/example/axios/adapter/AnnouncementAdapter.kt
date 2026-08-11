@@ -6,8 +6,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.axios.data.DataRepository
 import com.example.axios.databinding.ItemAnnouncementBinding
 
-class AnnouncementAdapter(private var items: List<DataRepository.Announcement>) :
-    RecyclerView.Adapter<AnnouncementAdapter.ViewHolder>() {
+class AnnouncementAdapter(
+    private var items: List<DataRepository.Announcement>,
+    private val onDelete: (DataRepository.Announcement) -> Unit
+) : RecyclerView.Adapter<AnnouncementAdapter.ViewHolder>() {
 
     class ViewHolder(val binding: ItemAnnouncementBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -26,6 +28,7 @@ class AnnouncementAdapter(private var items: List<DataRepository.Announcement>) 
         holder.binding.wingName.text = item.wingName
         holder.binding.message.text = item.message
         holder.binding.Info.text = item.info
+        holder.binding.btnDeleteAnnouncement.setOnClickListener { onDelete(item) }
     }
 
     override fun getItemCount(): Int = items.size

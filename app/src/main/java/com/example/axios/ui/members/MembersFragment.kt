@@ -79,8 +79,27 @@ class MembersFragment : Fragment() {
             itemBinding.memberName.text = member.name
             itemBinding.memberRollNo.text = member.rollNo
             itemBinding.memberContactInfo.text = member.contactInfo
+            itemBinding.btnDeleteMember.setOnClickListener {
+                confirmDeleteMember(member)
+            }
             container.addView(itemBinding.root)
         }
+    }
+
+    private fun confirmDeleteMember(member: DataRepository.Member) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Member")
+            .setMessage("Remove \"${member.name}\" from ${member.wingName}? This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                DataRepository.deleteMember(requireContext(), member) {
+                    activity?.runOnUiThread {
+                        loadMembers()
+                        Toast.makeText(requireContext(), "\"${member.name}\" removed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showAddMemberDialog() {

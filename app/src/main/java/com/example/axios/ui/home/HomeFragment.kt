@@ -34,13 +34,33 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.recyclerAnnouncements.layoutManager = LinearLayoutManager(requireContext())
-        adapter = AnnouncementAdapter(DataRepository.announcements)
+        adapter = AnnouncementAdapter(
+            DataRepository.announcements,
+            onDelete = { announcement -> confirmDeleteAnnouncement(announcement) }
+        )
         binding.recyclerAnnouncements.adapter = adapter
         updateEmptyState()
 
         binding.fabAddWing.setOnClickListener {
             showAddAnnouncementDialog()
         }
+    }
+
+    private fun confirmDeleteAnnouncement(announcement: DataRepository.Announcement) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Announcement")
+            .setMessage("Delete \"${announcement.message}\"? This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                DataRepository.deleteAnnouncement(requireContext(), announcement) {
+                    activity?.runOnUiThread {
+                        adapter.updateData(DataRepository.announcements)
+                        updateEmptyState()
+                        Toast.makeText(requireContext(), "Announcement deleted", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun updateEmptyState() {

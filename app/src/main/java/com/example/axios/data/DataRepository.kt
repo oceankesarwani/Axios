@@ -483,4 +483,45 @@ object DataRepository {
         db.collection("resources").document(resource.id).delete()
             .addOnFailureListener { e -> Log.w("DataRepository", "Error deleting resource from Firestore", e) }
     }
+
+    fun deleteAnnouncement(context: Context, announcement: Announcement, onComplete: () -> Unit) {
+        announcements.remove(announcement)
+        saveAnnouncements(context)
+        onComplete()
+
+        db.collection("announcements").document(announcement.id).delete()
+            .addOnFailureListener { e -> Log.w("DataRepository", "Error deleting announcement from Firestore", e) }
+    }
+
+    fun deleteMember(context: Context, member: Member, onComplete: () -> Unit) {
+        members.remove(member)
+        saveMembers(context)
+        onComplete()
+
+        db.collection("members").document(member.id).delete()
+            .addOnFailureListener { e -> Log.w("DataRepository", "Error deleting member from Firestore", e) }
+    }
+
+    fun deleteWing(context: Context, wingName: String, onComplete: () -> Unit) {
+        wings.remove(wingName)
+        // Cascade: remove all data belonging to this wing from memory
+        announcements.removeAll { it.wingName.equals(wingName, ignoreCase = true) }
+        members.removeAll { it.wingName.equals(wingName, ignoreCase = true) }
+        resources.removeAll { it.wingName.equals(wingName, ignoreCase = true) }
+        saveWings(context)
+        saveAnnouncements(context)
+        saveMembers(context)
+        saveResources(context)
+        onComplete()
+
+        // Delete wing + all related documents from Firestore
+        db.collection("wings").document(wingName).delete()
+            .addOnFailureListener { e -> Log.w("DataRepository", "Error deleting wing from Firestore", e) }
+        db.collection("announcements").whereEqualTo("wingName", wingName).get()
+            .addOnSuccessListener { snap -> snap.documents.forEach { it.reference.delete() } }
+        db.collection("members").whereEqualTo("wingName", wingName).get()
+            .addOnSuccessListener { snap -> snap.documents.forEach { it.reference.delete() } }
+        db.collection("resources").whereEqualTo("wingName", wingName).get()
+            .addOnSuccessListener { snap -> snap.documents.forEach { it.reference.delete() } }
+    }
 }

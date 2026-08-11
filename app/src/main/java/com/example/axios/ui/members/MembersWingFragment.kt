@@ -32,19 +32,39 @@ class MembersWingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.recyclerWings.layoutManager = LinearLayoutManager(requireContext())
-        adapter = WingAdapter(DataRepository.wings, R.layout.item_members_wing) { wingName ->
-            // Open MembersFragment for this wing
-            val fragment = MembersFragment.newInstance(wingName)
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.container, fragment)
-                .addToBackStack(null)
-                .commit()
-        }
+        adapter = WingAdapter(
+            DataRepository.wings,
+            R.layout.item_members_wing,
+            onItemClick = { wingName ->
+                val fragment = MembersFragment.newInstance(wingName)
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.container, fragment)
+                    .addToBackStack(null)
+                    .commit()
+            },
+            onDelete = { wingName -> confirmDeleteWing(wingName) }
+        )
         binding.recyclerWings.adapter = adapter
 
         binding.fabAddWing.setOnClickListener {
             showAddWingDialog()
         }
+    }
+
+    private fun confirmDeleteWing(wingName: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Wing")
+            .setMessage("Delete \"$wingName\"? This will permanently remove all its members, announcements, and resources.")
+            .setPositiveButton("Delete") { _, _ ->
+                DataRepository.deleteWing(requireContext(), wingName) {
+                    activity?.runOnUiThread {
+                        adapter.updateData(DataRepository.wings)
+                        Toast.makeText(requireContext(), "\"$wingName\" deleted", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showAddWingDialog() {

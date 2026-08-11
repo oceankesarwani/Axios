@@ -9,7 +9,7 @@
         android:id="@+id/heading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="28dp"
         android:fontFamily="@font/playfair_display"
         android:text="Wings"
         android:textColor="?attr/colorOnBackground"

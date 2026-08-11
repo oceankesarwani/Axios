@@ -394,11 +394,27 @@ object DataRepository {
                 val bytes = inputStream.readBytes()
                 inputStream.close()
 
+                val isPdf = fileName.endsWith(".pdf", true)
+                val isImage = fileName.endsWith(".png", true) ||
+                              fileName.endsWith(".jpg", true) ||
+                              fileName.endsWith(".jpeg", true) ||
+                              fileName.endsWith(".webp", true) ||
+                              fileName.endsWith(".gif", true)
+
+                val resourceType = if (isImage || isPdf) "image" else "raw"
+                val publicId = if (isImage || isPdf) {
+                    val dotIdx = fileName.lastIndexOf('.')
+                    val nameWithoutExt = if (dotIdx > 0) fileName.substring(0, dotIdx) else fileName
+                    "axios/resources/$wingName/$nameWithoutExt"
+                } else {
+                    "axios/resources/$wingName/$fileName"
+                }
+
                 onProgress(10) // signal started
 
                 val boundary = "----AxiosBoundary${System.currentTimeMillis()}"
                 val uploadUrl = URL(
-                    "https://api.cloudinary.com/v1_1/$CLOUDINARY_CLOUD_NAME/auto/upload"
+                    "https://api.cloudinary.com/v1_1/$CLOUDINARY_CLOUD_NAME/$resourceType/upload"
                 )
 
                 val conn = uploadUrl.openConnection() as HttpURLConnection
@@ -420,7 +436,7 @@ object DataRepository {
                 // public_id field — organises files in Cloudinary by wing
                 writer.append("--$boundary\r\n")
                 writer.append("Content-Disposition: form-data; name=\"public_id\"\r\n\r\n")
-                writer.append("axios/resources/$wingName/$fileName\r\n")
+                writer.append("$publicId\r\n")
                 writer.flush()
 
                 // file field

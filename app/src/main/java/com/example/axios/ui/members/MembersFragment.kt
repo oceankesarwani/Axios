@@ -79,6 +79,8 @@ class MembersFragment : Fragment() {
             itemBinding.memberName.text = member.name
             itemBinding.memberRollNo.text = member.rollNo
             itemBinding.memberContactInfo.text = member.contactInfo
+            // Bind avatar letter
+            itemBinding.memberAvatar.text = if (member.name.isNotEmpty()) member.name.take(1).uppercase() else "?"
             itemBinding.btnDeleteMember.setOnClickListener {
                 confirmDeleteMember(member)
             }

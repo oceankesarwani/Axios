@@ -3,5 +3,16 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-
+    <!-- Card accent strip colors for announcement wings -->
+    <color name="accent_gold">#C9A84C</color>
+    <color name="accent_gold_light">#F5E6B8</color>
+    <color name="card_surface_light">#F8F6F1</color>
+    <color name="card_surface_dark">#1E1E1E</color>
+    <color name="delete_red">#D32F2F</color>
+    <color name="delete_red_bg">#FFEBEE</color>
+    <color name="text_secondary_light">#6B6B6B</color>
+    <color name="text_secondary_dark">#A0A0A0</color>
+    <color name="divider_light">#E0E0E0</color>
+    <color name="divider_dark">#2C2C2C</color>
+    <color name="wing_chip_bg">#1AC9A84C</color>
 </resources>

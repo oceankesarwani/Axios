@@ -13,15 +13,10 @@ class AnnouncementAdapter(
 
     class ViewHolder(val binding: ItemAnnouncementBinding) : RecyclerView.ViewHolder(binding.root)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemAnnouncementBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        // Adjust the layout height to wrap_content so items don't stretch to full screen height
-        binding.root.layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        return ViewHolder(binding)
-    }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+        ViewHolder(ItemAnnouncementBinding.inflate(LayoutInflater.from(parent.context), parent, false).also {
+            it.root.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        })
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
@@ -31,7 +26,7 @@ class AnnouncementAdapter(
         holder.binding.btnDeleteAnnouncement.setOnClickListener { onDelete(item) }
     }
 
-    override fun getItemCount(): Int = items.size
+    override fun getItemCount() = items.size
 
     fun updateData(newItems: List<DataRepository.Announcement>) {
         items = newItems

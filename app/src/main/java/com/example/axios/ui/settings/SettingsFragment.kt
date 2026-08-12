@@ -18,10 +18,7 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -29,54 +26,34 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 1. Fetch user profile information from Google / Firebase Auth
         val currentUser = FirebaseAuth.getInstance().currentUser
-        val name = currentUser?.displayName ?: "Guest User"
         val email = currentUser?.email ?: ""
+        val rollNo = if (email.endsWith("@iiitl.ac.in")) email.substringBefore("@").uppercase() else "N/A"
+        val role = DataRepository.members.filter { it.rollNo.equals(rollNo, ignoreCase = true) }
+            .map { it.role }.distinct().joinToString(", ").ifEmpty { "Student" }
 
-        val rollNo = if (email.endsWith("@iiitl.ac.in")) {
-            email.substringBefore("@").uppercase()
-        } else {
-            "N/A"
-        }
-
-        val matchedMembers = DataRepository.members.filter { it.rollNo.equals(rollNo, ignoreCase = true) }
-        val studentRole = if (matchedMembers.isNotEmpty()) {
-            matchedMembers.map { it.role }.distinct().joinToString(", ")
-        } else {
-            "Student"
-        }
-
-        // Display user info in My Profile card
-        binding.name.text = name
+        binding.name.text = currentUser?.displayName ?: "Guest User"
         binding.rollNo.text = rollNo
-        binding.studentRole.text = studentRole
+        binding.studentRole.text = role
 
-        // 2. Setup theme toggle switch with persistence
         val sharedPrefs = requireContext().getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val isDarkMode = sharedPrefs.getBoolean("is_dark_mode", false)
-
-        binding.switch1.isChecked = isDarkMode
-        binding.switch1.text = if (isDarkMode) "Switch to light mode" else "Switch to dark mode"
+        val isDark = sharedPrefs.getBoolean("is_dark_mode", false)
+        binding.switch1.isChecked = isDark
+        binding.switch1.text = if (isDark) "Switch to light mode" else "Switch to dark mode"
 
         binding.switch1.setOnCheckedChangeListener { _, isChecked ->
             sharedPrefs.edit().putBoolean("is_dark_mode", isChecked).apply()
             binding.switch1.text = if (isChecked) "Switch to light mode" else "Switch to dark mode"
-
-            if (isChecked) {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            }
+            AppCompatDelegate.setDefaultNightMode(
+                if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+            )
         }
 
-        // 3. Logout action
         binding.btnLogout.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
-            val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+            startActivity(Intent(requireContext(), LoginActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
+            })
             activity?.finish()
         }
     }

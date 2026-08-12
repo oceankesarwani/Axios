@@ -24,11 +24,8 @@ class MembersFragment : Fragment() {
 
     companion object {
         private const val ARG_WING_NAME = "wing_name"
-
         fun newInstance(wingName: String) = MembersFragment().apply {
-            arguments = Bundle().apply {
-                putString(ARG_WING_NAME, wingName)
-            }
+            arguments = Bundle().apply { putString(ARG_WING_NAME, wingName) }
         }
     }
 
@@ -37,55 +34,86 @@ class MembersFragment : Fragment() {
         wingName = arguments?.getString(ARG_WING_NAME) ?: ""
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMembersBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         binding.Wing.text = wingName
         loadMembers()
-
-        binding.fabAddMember.setOnClickListener {
-            showAddMemberDialog()
-        }
+        binding.fabAddMember.setOnClickListener { showAddMemberDialog() }
     }
 
     private fun loadMembers() {
         val filtered = DataRepository.members.filter { it.wingName.equals(wingName, ignoreCase = true) }
-        val coordinators = filtered.filter { it.role.equals("Coordinator", ignoreCase = true) }
-        val seniorMembers = filtered.filter { it.role.equals("Senior Member", ignoreCase = true) }
-        val regularMembers = filtered.filter { it.role.equals("Member", ignoreCase = true) }
-
-        populateCategory(binding.coordinatorsContainer, coordinators)
-        populateCategory(binding.seniorMembersContainer, seniorMembers)
-        populateCategory(binding.membersContainer, regularMembers)
+        populateCategory(binding.coordinatorsContainer, filtered.filter { it.role.equals("Coordinator", ignoreCase = true) })
+        populateCategory(binding.seniorMembersContainer, filtered.filter { it.role.equals("Senior Member", ignoreCase = true) })
+        populateCategory(binding.membersContainer, filtered.filter { it.role.equals("Member", ignoreCase = true) })
     }
 
     private fun populateCategory(container: LinearLayout, list: List<DataRepository.Member>) {
         container.removeAllViews()
         val inflater = LayoutInflater.from(requireContext())
-        for (member in list) {
-            val itemBinding = ItemMemberBinding.inflate(inflater, container, false)
-            itemBinding.root.layoutParams = LinearLayout.LayoutParams(
+        val density = resources.displayMetrics.density
+        list.forEach { member ->
+            val item = ItemMemberBinding.inflate(inflater, container, false)
+            // Preserve margins from XML by using the inflated root's existing layoutParams
+            // and only override width/height if needed — don't strip margins
+            val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            itemBinding.memberName.text = member.name
-            itemBinding.memberRollNo.text = member.rollNo
-            itemBinding.memberContactInfo.text = member.contactInfo
-            // Bind avatar letter
-            itemBinding.memberAvatar.text = if (member.name.isNotEmpty()) member.name.take(1).uppercase() else "?"
-            itemBinding.btnDeleteMember.setOnClickListener {
-                confirmDeleteMember(member)
+            ).apply {
+                topMargin = (14 * density).toInt()
+                bottomMargin = (4 * density).toInt()
             }
-            container.addView(itemBinding.root)
+            item.root.layoutParams = lp
+            item.memberName.text = member.name
+            item.memberRollNo.text = member.rollNo
+            item.memberContactInfo.text = member.contactInfo
+            item.memberAvatar.text = member.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            item.btnEditMember.setOnClickListener { showEditMemberDialog(member) }
+            item.btnDeleteMember.setOnClickListener { confirmDeleteMember(member) }
+            container.addView(item.root)
         }
+    }
+
+    private fun showEditMemberDialog(member: DataRepository.Member) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_member, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etMemberName)
+        val etRollNo = dialogView.findViewById<EditText>(R.id.etMemberRollNo)
+        val etContact = dialogView.findViewById<EditText>(R.id.etMemberContact)
+        val spinnerRole = dialogView.findViewById<Spinner>(R.id.spinnerRole)
+
+        etName.setText(member.name)
+        etRollNo.setText(member.rollNo)
+        etContact.setText(member.contactInfo)
+
+        val roles = listOf("Coordinator", "Senior Member", "Member")
+        spinnerRole.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, roles).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        spinnerRole.setSelection(roles.indexOf(member.role).coerceAtLeast(0))
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Edit Member")
+            .setView(dialogView)
+            .setPositiveButton("Save") { dialog, _ ->
+                val name = etName.text.toString().trim()
+                val rollNo = etRollNo.text.toString().trim().uppercase()
+                val contact = etContact.text.toString().trim()
+                val role = spinnerRole.selectedItem?.toString() ?: member.role
+                if (name.isEmpty() || rollNo.isEmpty() || contact.isEmpty()) {
+                    Toast.makeText(requireContext(), "All fields are required", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                DataRepository.editMember(requireContext(), member, name, rollNo, contact, role) {
+                    activity?.runOnUiThread { loadMembers() }
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun confirmDeleteMember(member: DataRepository.Member) {
@@ -100,8 +128,7 @@ class MembersFragment : Fragment() {
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun showAddMemberDialog() {
@@ -111,10 +138,10 @@ class MembersFragment : Fragment() {
         val etContact = dialogView.findViewById<EditText>(R.id.etMemberContact)
         val spinnerRole = dialogView.findViewById<Spinner>(R.id.spinnerRole)
 
-        val roles = listOf("Coordinator", "Senior Member", "Member")
-        val spinnerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, roles)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerRole.adapter = spinnerAdapter
+        spinnerRole.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item,
+            listOf("Coordinator", "Senior Member", "Member")).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
 
         AlertDialog.Builder(requireContext())
             .setTitle("Add Wing Member")
@@ -124,23 +151,16 @@ class MembersFragment : Fragment() {
                 val rollNo = etRollNo.text.toString().trim().uppercase()
                 val contact = etContact.text.toString().trim()
                 val role = spinnerRole.selectedItem?.toString() ?: "Member"
-
                 if (name.isEmpty() || rollNo.isEmpty() || contact.isEmpty()) {
                     Toast.makeText(requireContext(), "All fields are required", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-
                 DataRepository.addMember(requireContext(), wingName, name, rollNo, contact, role) {
-                    activity?.runOnUiThread {
-                        loadMembers()
-                    }
+                    activity?.runOnUiThread { loadMembers() }
                 }
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
+            .setNegativeButton("Cancel", null).show()
     }
 
     override fun onDestroyView() {

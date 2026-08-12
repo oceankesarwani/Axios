@@ -14,15 +14,10 @@ class ResourceAdapter(
 
     class ViewHolder(val binding: ItemResourceBinding) : RecyclerView.ViewHolder(binding.root)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemResourceBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        // Ensure layout height is wrap_content
-        binding.root.layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        return ViewHolder(binding)
-    }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+        ViewHolder(ItemResourceBinding.inflate(LayoutInflater.from(parent.context), parent, false).also {
+            it.root.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        })
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
@@ -31,7 +26,7 @@ class ResourceAdapter(
         holder.binding.resourceCard.setOnClickListener { onOpen(item) }
     }
 
-    override fun getItemCount(): Int = items.size
+    override fun getItemCount() = items.size
 
     fun updateData(newItems: List<DataRepository.Resource>) {
         items = newItems

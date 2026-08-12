@@ -19,29 +19,21 @@ class ResourcesWingFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var adapter: WingAdapter
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentResourcesWingnamesBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         binding.recyclerWings.layoutManager = LinearLayoutManager(requireContext())
-        adapter = WingAdapter(
-            DataRepository.wings,
-            R.layout.item_resources_wing,
+        adapter = WingAdapter(DataRepository.wings, R.layout.item_resources_wing,
             onItemClick = { wingName ->
-                val fragment = ResourcesFragment.newInstance(wingName)
                 parentFragmentManager.beginTransaction()
-                    .replace(R.id.container, fragment)
-                    .addToBackStack(null)
-                    .commit()
+                    .replace(R.id.container, ResourcesFragment.newInstance(wingName))
+                    .addToBackStack(null).commit()
             },
-            onDelete = { wingName -> confirmDeleteWing(wingName) }
+            onDelete = { confirmDeleteWing(it) }
         )
         binding.recyclerWings.adapter = adapter
     }
@@ -58,8 +50,7 @@ class ResourcesWingFragment : Fragment() {
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            .setNegativeButton("Cancel", null).show()
     }
 
     override fun onResume() {

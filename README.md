@@ -137,6 +137,31 @@ Data flows: **Firestore → in-memory lists → SharedPreferences cache → UI a
 
 ---
 
+## Access & Roles
+
+Axios uses a **roll-number based role system** to identify members within the app.
+
+### Who can log in?
+Any student with a valid `@iiitl.ac.in` Google account can sign in and **view** all content (announcements, members, resources).
+
+### Who gets a role?
+A user's role is determined by matching their roll number (derived from their email — e.g. `lcs2024001@iiitl.ac.in` → `LCS2024001`) against the Members list in Firestore.
+
+| Scenario | Role shown in Settings |
+|---|---|
+| Roll number found in Members with role `Coordinator` | **Coordinator** |
+| Roll number found in Members with role `Senior Member` | **Senior Member** |
+| Roll number found in Members with role `Member` | **Member** |
+| Roll number **not found** in Members list | **Student** (default) |
+
+> [!IMPORTANT]
+> Only users whose roll number has been **manually added** by an admin via the Members section will see a club role in their profile. Everyone else appears as **Student**.
+
+### What does the role affect?
+Currently, roles are **display-only** — they appear in the Settings profile card. All logged-in users with an `@iiitl.ac.in` account can add/delete announcements, members, wings, and resources. Role-based write restrictions can be enforced via Firestore Security Rules in a future update.
+
+---
+
 ## Contributing
 
 1. Fork the repository

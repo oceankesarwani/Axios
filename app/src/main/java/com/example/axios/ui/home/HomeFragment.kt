@@ -22,28 +22,18 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var adapter: AnnouncementAdapter
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         binding.recyclerAnnouncements.layoutManager = LinearLayoutManager(requireContext())
-        adapter = AnnouncementAdapter(
-            DataRepository.announcements,
-            onDelete = { announcement -> confirmDeleteAnnouncement(announcement) }
-        )
+        adapter = AnnouncementAdapter(DataRepository.announcements) { confirmDeleteAnnouncement(it) }
         binding.recyclerAnnouncements.adapter = adapter
         updateEmptyState()
-
-        binding.fabAddWing.setOnClickListener {
-            showAddAnnouncementDialog()
-        }
+        binding.fabAddWing.setOnClickListener { showAddAnnouncementDialog() }
     }
 
     private fun confirmDeleteAnnouncement(announcement: DataRepository.Announcement) {
@@ -52,25 +42,18 @@ class HomeFragment : Fragment() {
             .setMessage("Delete \"${announcement.message}\"? This cannot be undone.")
             .setPositiveButton("Delete") { _, _ ->
                 DataRepository.deleteAnnouncement(requireContext(), announcement) {
-                    activity?.runOnUiThread {
-                        adapter.updateData(DataRepository.announcements)
-                        updateEmptyState()
+                    activity?.runOnUiThread { adapter.updateData(DataRepository.announcements); updateEmptyState()
                         Toast.makeText(requireContext(), "Announcement deleted", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun updateEmptyState() {
-        if (DataRepository.announcements.isEmpty()) {
-            binding.tvEmptyAnnouncements.visibility = View.VISIBLE
-            binding.recyclerAnnouncements.visibility = View.GONE
-        } else {
-            binding.tvEmptyAnnouncements.visibility = View.GONE
-            binding.recyclerAnnouncements.visibility = View.VISIBLE
-        }
+        val empty = DataRepository.announcements.isEmpty()
+        binding.tvEmptyAnnouncements.visibility = if (empty) View.VISIBLE else View.GONE
+        binding.recyclerAnnouncements.visibility = if (empty) View.GONE else View.VISIBLE
     }
 
     private fun showAddAnnouncementDialog() {
@@ -79,10 +62,9 @@ class HomeFragment : Fragment() {
         val etMessage = dialogView.findViewById<EditText>(R.id.etMessage)
         val etInfo = dialogView.findViewById<EditText>(R.id.etInfo)
 
-        val wingList = DataRepository.wings
-        val spinnerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, wingList)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerWing.adapter = spinnerAdapter
+        spinnerWing.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, DataRepository.wings).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
 
         AlertDialog.Builder(requireContext())
             .setTitle("New Announcement")
@@ -91,28 +73,14 @@ class HomeFragment : Fragment() {
                 val selectedWing = spinnerWing.selectedItem?.toString() ?: ""
                 val message = etMessage.text.toString().trim()
                 val info = etInfo.text.toString().trim()
-
-                if (selectedWing.isEmpty()) {
-                    Toast.makeText(requireContext(), "Please add a wing first!", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                if (message.isEmpty() || info.isEmpty()) {
-                    Toast.makeText(requireContext(), "Fields cannot be empty", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-
+                if (selectedWing.isEmpty()) { toast("Please add a wing first!"); return@setPositiveButton }
+                if (message.isEmpty() || info.isEmpty()) { toast("Fields cannot be empty"); return@setPositiveButton }
                 DataRepository.addAnnouncement(requireContext(), selectedWing, message, info) {
-                    activity?.runOnUiThread {
-                        adapter.updateData(DataRepository.announcements)
-                        updateEmptyState()
-                    }
+                    activity?.runOnUiThread { adapter.updateData(DataRepository.announcements); updateEmptyState() }
                 }
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
+            .setNegativeButton("Cancel", null).show()
     }
 
     override fun onResume() {
@@ -125,4 +93,6 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    private fun toast(msg: String) = Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
 }

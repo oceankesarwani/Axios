@@ -171,6 +171,18 @@ Currently, roles are **display-only** — they appear in the Settings profile ca
 
 ---
 
+## LLM Disclosure
+
+This project was developed with the assistance of AI/LLM tools. Specifically:
+
+- **Code completion & boilerplate**: GitHub Copilot / Antigravity (Google DeepMind) was used for completing repetitive patterns such as adapter bindings, ViewBinding setup, and Firestore read/write calls.
+- **Debugging**: LLM assistance was used to diagnose issues such as race conditions in the `DataRepository` sync flow and SharedPreferences serialization edge cases.
+- **Research**: AI tools were consulted for documentation and best-practice guidance around Cloudinary unsigned uploads, Firestore security rules, and Firebase Google Sign-In domain restriction.
+
+All generated code was reviewed, understood, and integrated intentionally — no code was blindly copy-pasted without verification.
+
+---
+
 ## License
 
 This project is for internal use at IIIT Lucknow. All rights reserved.

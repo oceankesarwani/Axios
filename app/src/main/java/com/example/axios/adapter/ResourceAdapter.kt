@@ -15,9 +15,7 @@ class ResourceAdapter(
     class ViewHolder(val binding: ItemResourceBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        ViewHolder(ItemResourceBinding.inflate(LayoutInflater.from(parent.context), parent, false).also {
-            it.root.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        })
+        ViewHolder(ItemResourceBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]

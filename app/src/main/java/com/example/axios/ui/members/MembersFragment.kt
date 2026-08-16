@@ -66,7 +66,7 @@ class MembersFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 topMargin = (14 * density).toInt()
-                bottomMargin = (4 * density).toInt()
+                bottomMargin = (10 * density).toInt()
             }
             item.root.layoutParams = lp
             item.memberName.text = member.name

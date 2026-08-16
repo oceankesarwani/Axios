@@ -15,9 +15,7 @@ class WingAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(layoutResId, parent, false).also {
-            it.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
+        val view = LayoutInflater.from(parent.context).inflate(layoutResId, parent, false)
         return object : RecyclerView.ViewHolder(view) {}
     }
 
